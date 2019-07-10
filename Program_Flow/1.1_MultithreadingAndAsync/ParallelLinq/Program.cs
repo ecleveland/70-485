@@ -26,18 +26,46 @@ namespace ParallelLinq
                 new Person { Name = "Iva Baldwin", City = "Rumgijed" },
                 new Person { Name = "Ella Bryant", City = "Ekzavud" }
             };
-// TODO: Return to listing 1-6 informing parallelization (pdf:32)
-            var result = from person in people.AsParallel()
-                         where person.City == "Dengupom"
-                         select person;
+
+            // Return to listing 1-6 informing parallelization (pdf:32)
+            // this call of AsParallel requests that the query be parallelized whether performance is improved or not. 
+            // Executed on max
+            // 4 processers
+            // If you need as ordered - use the as ordered addition. .AsParallel().AsOrdered()
+            // .AsSequential() preserves the query order
+            var result = from person in people.AsParallel().
+                            WithDegreeOfParallelism(4).
+                            WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+                            where person.City == "Dengupom"
+                            select person;
             
             foreach (var person in result)
             {
                 Console.WriteLine(person.Name);
             }
 
+            // Exceptions in PLINQ Queries
+            try
+            {
+                var exResult = from person in people.AsParallel()
+                    where CheckCity(person.City)
+                    select person;
+                exResult.ForAll(person => Console.WriteLine(person.Name));
+            }
+            catch (AggregateException e)
+            {
+                Console.WriteLine($"{e.InnerExceptions.Count} : exceptions.");
+            }
+
             Console.WriteLine("Finished processing. Press a key to end.");
             Console.ReadKey();
+        }
+
+        public static bool CheckCity(string name)
+        {
+            if(name == "")
+                throw new ArgumentException(name);
+            return name == "Seattle";
         }
     }
 }
